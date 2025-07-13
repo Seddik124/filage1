@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Détection d'Erreurs et Doublons</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+
+    <style>
+      :root {
+        --primary-color: #3498db;
+        --secondary-color: #2ecc71;
+        --error-color: #e74c3c;
+        --duplicate-color: #f39c12;
+        --light-gray: #ecf0f1;
+        --dark-gray: #7f8c8d;
+        --text-color: #2c3e50;
+        --white: #ffffff;
+        --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      body {
+        background-color: #f5f7fa;
+        color: var(--text-color);
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+
+      header h1 {
+        font-size: 2.5rem;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+      }
+
+      .subtitle {
+        color: var(--dark-gray);
+        font-size: 1.1rem;
+      }
+
+      .upload-container {
+        margin: 2rem 0;
+      }
+
+      .upload-box {
+        border: 2px dashed var(--primary-color);
+        border-radius: 10px;
+        padding: 2rem;
+        text-align: center;
+        background-color: var(--white);
+        transition: all 0.3s ease;
+        cursor: pointer;
+      }
+
+      .upload-box:hover {
+        background-color: rgba(52, 152, 219, 0.05);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow);
+      }
+
+      .upload-box.highlight {
+        border-color: var(--secondary-color);
+        background-color: rgba(46, 204, 113, 0.05);
+      }
+
+      .upload-box i {
+        font-size: 3rem;
+        color: var(--primary-color);
+        margin-bottom: 1rem;
+      }
+
+      .upload-box h3 {
+        margin-bottom: 0.5rem;
+        color: var(--primary-color);
+      }
+
+      .upload-box p {
+        margin: 0.5rem 0;
+        color: var(--dark-gray);
+      }
+
+      .btn {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 0.8rem 1.5rem;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .btn:hover {
+        background-color: #2980b9;
+        transform: translateY(-2px);
+        box-shadow: var(--shadow);
+      }
+
+      .btn.secondary {
+        background-color: var(--secondary-color);
+      }
+
+      .btn.secondary:hover {
+        background-color: #27ae60;
+      }
+
+      .btn.cancel {
+        background-color: var(--dark-gray);
+      }
+
+      .btn.cancel:hover {
+        background-color: #5d6d7e;
+      }
+
+      .file-info {
+        margin-top: 1rem;
+        padding: 0.8rem;
+        background-color: var(--light-gray);
+        border-radius: 5px;
+        display: none;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .file-details {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .clear-btn {
+        background-color: var(--error-color);
+        color: white;
+        border: none;
+        padding: 0.5rem;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: all 0.3s ease;
+      }
+
+      .clear-btn:hover {
+        background-color: #c0392b;
+      }
+
+      .options-container {
+        margin: 2rem 0;
+      }
+
+      .options-container h2 {
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .options-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .option-card {
+        background-color: var(--white);
+        border-radius: 10px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: 1px solid transparent;
+      }
+
+      .option-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow);
+        border-color: var(--primary-color);
+      }
+
+      .option-card.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .option-card.disabled:hover {
+        transform: none;
+        box-shadow: none;
+        border-color: transparent;
+      }
+
+      .option-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 1.5rem;
+      }
+
+      .option-icon.error {
+        background-color: rgba(231, 76, 60, 0.1);
+        color: var(--error-color);
+      }
+
+      .option-icon.duplicate {
+        background-color: rgba(243, 156, 18, 0.1);
+        color: var(--duplicate-color);
+      }
+
+      .option-card h3 {
+        margin-bottom: 0.5rem;
+      }
+
+      .option-card p {
+        color: var(--dark-gray);
+        font-size: 0.9rem;
+      }
+
+      /* Modal Styles */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        animation: fadeIn 0.3s ease;
+      }
+
+      .modal.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-content {
+        background-color: var(--white);
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        animation: slideIn 0.3s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateY(-20px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--light-gray);
+      }
+
+      .modal-header h2 {
+        color: var(--primary-color);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--dark-gray);
+        transition: color 0.3s ease;
+      }
+
+      .close-btn:hover {
+        color: var(--error-color);
+      }
+
+      .sheet-list {
+        margin: 1rem 0;
+      }
+
+      .sheet-item {
+        padding: 0.8rem;
+        border: 1px solid var(--light-gray);
+        border-radius: 5px;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .sheet-item:hover {
+        background-color: rgba(52, 152, 219, 0.1);
+        border-color: var(--primary-color);
+      }
+
+      .sheet-item.selected {
+        background-color: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+      }
+
+      .modal-footer {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--light-gray);
+      }
+
+      .results-container {
+        background-color: var(--white);
+        border-radius: 10px;
+        padding: 2rem;
+        margin-top: 2rem;
+        box-shadow: var(--shadow);
+      }
+
+      .results-container h2 {
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+
+      .result-stats {
+        display: flex;
+        gap: 1rem;
+      }
+
+      .stat-card {
+        padding: 0.8rem 1.2rem;
+        border-radius: 5px;
+        background-color: var(--light-gray);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .stat-card.error {
+        background-color: rgba(231, 76, 60, 0.1);
+        color: var(--error-color);
+      }
+
+      .stat-card.duplicate {
+        background-color: rgba(243, 156, 18, 0.1);
+        color: var(--duplicate-color);
+      }
+
+      .download-btn {
+        background-color: var(--secondary-color);
+      }
+
+      .download-btn:hover {
+        background-color: #27ae60;
+      }
+
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid var(--light-gray);
+        margin-bottom: 1rem;
+      }
+
+      .tab-btn {
+        padding: 0.8rem 1.5rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+        color: var(--dark-gray);
+        position: relative;
+      }
+
+      .tab-btn.active {
+        color: var(--primary-color);
+        font-weight: bold;
+      }
+
+      .tab-btn.active::after {
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background-color: var(--primary-color);
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .summary-item {
+        background-color: var(--light-gray);
+        padding: 1rem;
+        border-radius: 5px;
+        border-left: 4px solid var(--primary-color);
+      }
+
+      .summary-item.error {
+        border-left-color: var(--error-color);
+      }
+
+      .summary-item.duplicate {
+        border-left-color: var(--duplicate-color);
+      }
+
+      .table-container {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+      }
+
+      th,
+      td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid var(--light-gray);
+      }
+
+      th {
+        background-color: var(--primary-color);
+        color: white;
+      }
+
+      tr:nth-child(even) {
+        background-color: var(--light-gray);
+      }
+
+      tr:hover {
+        background-color: rgba(52, 152, 219, 0.1);
+      }
+
+      .status-message {
+        padding: 1rem;
+        border-radius: 5px;
+        margin-top: 1rem;
+        text-align: center;
+        display: none;
+      }
+
+      .status-message.success {
+        background-color: rgba(46, 204, 113, 0.1);
+        color: #27ae60;
+        display: block;
+      }
+
+      .status-message.error {
+        background-color: rgba(231, 76, 60, 0.1);
+        color: var(--error-color);
+        display: block;
+      }
+
+      .status-message.loading {
+        background-color: rgba(52, 152, 219, 0.1);
+        color: var(--primary-color);
+        display: block;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      .loading-spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 1rem;
+        }
+
+        .options-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .results-header {
+          flex-direction: column;
+          gap: 1rem;
+          align-items: flex-start;
+        }
+
+        .result-stats {
+          flex-wrap: wrap;
+        }
+
+        .modal-content {
+          width: 95%;
+          margin: 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1><i class="fas fa-search"></i> Détection d'Erreurs et Doublons</h1>
+        <p class="subtitle">Analyse des données techniques et géographiques</p>
+      </header>
+
+      <div class="upload-container">
+        <div class="upload-box" id="dropZone">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <h3>Glissez votre fichier Excel ici</h3>
+          <p>ou</p>
+          <button class="btn" id="browseBtn">
+            <i class="fas fa-folder-open"></i>
+            Parcourir les fichiers
+          </button>
+          <input
+            type="file"
+            id="fileInput"
+            accept=".xlsx,.xls"
+            style="display: none"
+          />
+          <p><small>Formats acceptés: .xlsx, .xls</small></p>
+        </div>
+        <div class="file-info" id="fileInfo"></div>
+      </div>
+
+      <div class="options-container">
+        <h2><i class="fas fa-tasks"></i> Options d'analyse</h2>
+        <div class="options-grid">
+          <div
+            class="option-card disabled"
+            data-action="detect_errors"
+            id="errorOption"
+          >
+            <div class="option-icon error">
+              <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <h3>Détection d'Erreurs</h3>
+            <p>Vérifie les incohérences dans les données techniques</p>
+          </div>
+
+          <div
+            class="option-card disabled"
+            data-action="detect_duplicates"
+            id="duplicateOption"
+          >
+            <div class="option-icon duplicate">
+              <i class="fas fa-clone"></i>
+            </div>
+            <h3>Détection de Doublons</h3>
+            <p>Identifie les coordonnées identiques avec IDs différents</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="results-container hidden" id="resultsContainer">
+        <h2><i class="fas fa-chart-bar"></i> Résultats</h2>
+        <div class="results-header">
+          <div class="result-stats" id="resultStats"></div>
+          <button class="btn download-btn" id="downloadBtn">
+            <i class="fas fa-file-download"></i> Télécharger le rapport
+          </button>
+        </div>
+
+        <div class="results-content">
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="summary">Résumé</button>
+            <button class="tab-btn" data-tab="details">Détails</button>
+          </div>
+
+          <div class="tab-content active" id="summaryTab">
+            <div class="summary-cards" id="summaryCards"></div>
+          </div>
+
+          <div class="tab-content" id="detailsTab">
+            <div class="table-container">
+              <table id="resultsTable">
+                <thead>
+                  <tr id="tableHeader"></tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="status-message" id="statusMessage"></div>
+    </div>
+
+    <!-- Sheet Selection Modal -->
+    <div class="modal" id="sheetModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2><i class="fas fa-file-excel"></i> Sélectionner une feuille</h2>
+          <button class="close-btn" id="closeModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Choisissez la feuille Excel à analyser :</p>
+          <div class="sheet-list" id="sheetList">
+            <!-- Les feuilles seront ajoutées dynamiquement ici -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn cancel" id="cancelModal">Annuler</button>
+          <button class="btn secondary" id="confirmSheet" disabled>
+            <i class="fas fa-check"></i> Confirmer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Éléments DOM
+        const dropZone = document.getElementById("dropZone");
+        const fileInput = document.getElementById("fileInput");
+        const browseBtn = document.getElementById("browseBtn");
+        const fileInfo = document.getElementById("fileInfo");
+        const resultsContainer = document.getElementById("resultsContainer");
+        const resultStats = document.getElementById("resultStats");
+        const summaryCards = document.getElementById("summaryCards");
+        const tableHeader = document.getElementById("tableHeader");
+        const tableBody = document.getElementById("tableBody");
+        const downloadBtn = document.getElementById("downloadBtn");
+        const statusMessage = document.getElementById("statusMessage");
+        const tabBtns = document.querySelectorAll(".tab-btn");
+        const tabContents = document.querySelectorAll(".tab-content");
+        const errorOption = document.getElementById("errorOption");
+        const duplicateOption = document.getElementById("duplicateOption");
+
+        // Modal elements
+        const sheetModal = document.getElementById("sheetModal");
+        const closeModal = document.getElementById("closeModal");
+        const cancelModal = document.getElementById("cancelModal");
+        const confirmSheet = document.getElementById("confirmSheet");
+        const sheetList = document.getElementById("sheetList");
+
+        let currentFile = null;
+        let processedData = null;
+        let currentAction = null;
+        let selectedSheet = null;
+        let availableSheets = [];
+
+        // Gestion du drag and drop
+        ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+          dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+
+        ["dragenter", "dragover"].forEach((eventName) => {
+          dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ["dragleave", "drop"].forEach((eventName) => {
+          dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+          dropZone.classList.add("highlight");
+        }
+
+        function unhighlight() {
+          dropZone.classList.remove("highlight");
+        }
+
+        dropZone.addEventListener("drop", handleDrop, false);
+
+        function handleDrop(e) {
+          const dt = e.dataTransfer;
+          const files = dt.files;
+
+          if (files.length > 0 && isValidFile(files[0])) {
+            handleFiles(files);
+          }
+        }
+
+        // Gestion du clic sur le bouton Parcourir
+        browseBtn.addEventListener("click", function () {
+          fileInput.click();
+        });
+
+        // Gestion de la sélection de fichier
+        fileInput.addEventListener("change", function (e) {
+          if (e.target.files.length > 0 && isValidFile(e.target.files[0])) {
+            handleFiles(e.target.files);
+          }
+        });
+
+        function isValidFile(file) {
+          const validTypes = [
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-excel",
+          ];
+          return (
+            validTypes.includes(file.type) ||
+            file.name.endsWith(".xlsx") ||
+            file.name.endsWith(".xls")
+          );
+        }
+
+        function handleFiles(files) {
+          currentFile = files[0];
+          getSheets();
+        }
+
+        function getSheets() {
+          showStatus("Chargement des feuilles...", "loading");
+
+          const formData = new FormData();
+          formData.append("file", currentFile);
+
+          fetch("/get_sheets", {
+            method: "POST",
+            body: formData,
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Erreur lors du chargement des feuilles");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              if (data.error) {
+                throw new Error(data.error);
+              }
+
+              availableSheets = data.sheets;
+              displayFileInfo();
+              enableOptions();
+              showStatus("Fichier prêt pour analyse", "success");
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              showStatus(error.message, "error");
+            });
+        }
+
+        function displayFileInfo() {
+          fileInfo.innerHTML = `
+                    <div class="file-details">
+                        <i class="fas fa-file-excel" style="color: var(--secondary-color);"></i>
+                        <span><strong>${
+                          currentFile.name
+                        }</strong> (${formatFileSize(currentFile.size)})</span>
+                        <span style="margin-left: 1rem; color: var(--dark-gray);">
+                            <i class="fas fa-layer-group"></i> ${
+                              availableSheets.length
+                            } feuille(s)
+                        </span>
+                    </div>
+                    <button class="clear-btn" id="clearFile"><i class="fas fa-times"></i></button>
+                `;
+          fileInfo.style.display = "flex";
+
+          // Ajouter l'événement pour le bouton de suppression
+          document
+            .getElementById("clearFile")
+            .addEventListener("click", clearFile);
+        }
+
+        function enableOptions() {
+          errorOption.classList.remove("disabled");
+          duplicateOption.classList.remove("disabled");
+        }
+
+        function disableOptions() {
+          errorOption.classList.add("disabled");
+          duplicateOption.classList.add("disabled");
+        }
+
+        function formatFileSize(bytes) {
+          if (bytes === 0) return "0 Bytes";
+          const k = 1024;
+          const sizes = ["Bytes", "KB", "MB", "GB"];
+          const i = Math.floor(Math.log(bytes) / Math.log(k));
+          return parseFloat(
+            (bytes / Math.pow(k, i)).toFixed(2) + " " + sizes[i]
+          );
+        }
+
+        function clearFile() {
+          currentFile = null;
+          selectedSheet = null;
+          availableSheets = [];
+          fileInfo.style.display = "none";
+          resultsContainer.classList.add("hidden");
+          disableOptions();
+          showStatus("", "success");
+        }
+
+        // Gestion des options d'analyse
+        errorOption.addEventListener("click", function () {
+          if (!this.classList.contains("disabled")) {
+            currentAction = "detect_errors";
+            showSheetModal();
+          }
+        });
+
+        duplicateOption.addEventListener("click", function () {
+          if (!this.classList.contains("disabled")) {
+            currentAction = "detect_duplicates";
+            showSheetModal();
+          }
+        });
+
+        // Gestion du modal
+        function showSheetModal() {
+          // Remplir la liste des feuilles
+          sheetList.innerHTML = "";
+          availableSheets.forEach((sheet, index) => {
+            const sheetItem = document.createElement("div");
+            sheetItem.className = "sheet-item";
+            sheetItem.innerHTML = `
+                        <i class="fas fa-file-alt"></i>
+                        <span>${sheet}</span>
+                    `;
+            sheetItem.addEventListener("click", function () {
+              selectSheet(sheet, sheetItem);
+            });
+            sheetList.appendChild(sheetItem);
+          });
+
+          selectedSheet = null;
+          confirmSheet.disabled = true;
+          sheetModal.classList.add("show");
+        }
+
+        function hideSheetModal() {
+          sheetModal.classList.remove("show");
+        }
+
+        function cancelSheetModal() {
+          sheetModal.classList.remove("show");
+          selectedSheet = null;
+        }
+
+        function selectSheet(sheet, element) {
+          // Désélectionner tous les éléments
+          document.querySelectorAll(".sheet-item").forEach((item) => {
+            item.classList.remove("selected");
+          });
+
+          // Sélectionner l'élément cliqué
+          element.classList.add("selected");
+          selectedSheet = sheet;
+          confirmSheet.disabled = false;
+        }
+
+        // Événements du modal
+        closeModal.addEventListener("click", cancelSheetModal);
+        cancelModal.addEventListener("click", cancelSheetModal);
+
+        confirmSheet.addEventListener("click", function () {
+          if (selectedSheet) {
+            const chosenSheet = selectedSheet; // Save the selected sheet
+            hideSheetModal();
+            selectedSheet = chosenSheet; // Restore the selected sheet
+            processFile();
+          }
+        });
+
+        // Fermer le modal en cliquant à l'extérieur
+        sheetModal.addEventListener("click", function (e) {
+          if (e.target === sheetModal) {
+            cancelSheetModal();
+          }
+        });
+
+        // Gestion des onglets
+        tabBtns.forEach((btn) => {
+          btn.addEventListener("click", function () {
+            const tabId = this.getAttribute("data-tab");
+
+            // Désactiver tous les onglets
+            tabBtns.forEach((b) => b.classList.remove("active"));
+            tabContents.forEach((c) => c.classList.remove("active"));
+
+            // Activer l'onglet sélectionné
+            this.classList.add("active");
+            document.getElementById(tabId + "Tab").classList.add("active");
+          });
+        });
+
+        // Traitement du fichier
+        function processFile() {
+          console.log("Processing file with sheet:", selectedSheet);
+          showStatus("Analyse en cours...", "loading");
+
+          const formData = new FormData();
+          formData.append("file", currentFile);
+          formData.append("action", currentAction);
+          formData.append("sheet_name", selectedSheet);
+
+          fetch("/process", {
+            method: "POST",
+            body: formData,
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Erreur lors du traitement du fichier");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              if (data.error) {
+                throw new Error(data.error);
+              }
+
+              // Afficher les résultats
+              displayResults(data);
+              processedData = data.file;
+              resultsContainer.classList.remove("hidden");
+              showStatus("Analyse terminée avec succès", "success");
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              showStatus(error.message, "error");
+            });
+        }
+
+        // Affichage des résultats
+        function displayResults(data) {
+          // Effacer les résultats précédents
+          resultStats.innerHTML = "";
+          summaryCards.innerHTML = "";
+          tableHeader.innerHTML = "";
+          tableBody.innerHTML = "";
+
+          if (data.message) {
+            // Aucun problème détecté
+            resultStats.innerHTML = `
+                        <div class="stat-card">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Aucun problème détecté</span>
+                        </div>
+                    `;
+            downloadBtn.style.display = "none";
+            return;
+          }
+
+          if (currentAction === "detect_errors") {
+            // Résultats pour la détection d'erreurs
+            const errorCount = data.results.errors.length;
+
+            resultStats.innerHTML = `
+                        <div class="stat-card error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>${errorCount} erreur(s) détectée(s)</span>
+                        </div>
+                    `;
+
+            // Remplir le résumé
+            const errorsByColumn = {};
+            data.results.errors.forEach((error) => {
+              if (!errorsByColumn[error.Colonne]) {
+                errorsByColumn[error.Colonne] = 0;
+              }
+              errorsByColumn[error.Colonne]++;
+            });
+
+            for (const [col, count] of Object.entries(errorsByColumn)) {
+              const summaryItem = document.createElement("div");
+              summaryItem.className = "summary-item error";
+              summaryItem.innerHTML = `
+                            <h4>Colonne: ${col}</h4>
+                            <p>${count} erreur(s) détectée(s)</p>
+                        `;
+              summaryCards.appendChild(summaryItem);
+            }
+
+            // Remplir le tableau détaillé
+            const headers = ["Ligne", "Colonne", "Valeur", "Problème"];
+            tableHeader.innerHTML = headers
+              .map((h) => `<th>${h}</th>`)
+              .join("");
+
+            data.results.errors.forEach((error) => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                            <td>${error.Ligne}</td>
+                            <td>${error.Colonne}</td>
+                            <td>${error.Valeur}</td>
+                            <td>${error.Problème}</td>
+                        `;
+              tableBody.appendChild(row);
+            });
+          } else if (currentAction === "detect_duplicates") {
+            // Résultats pour la détection de doublons
+            const duplicateCount = data.results.doublons.length;
+
+            resultStats.innerHTML = `
+                        <div class="stat-card duplicate">
+                            <i class="fas fa-copy"></i>
+                            <span>${duplicateCount} doublon(s) détecté(s)</span>
+                        </div>
+                    `;
+
+            // Remplir le résumé
+            const coordGroups = {};
+            data.results.doublons.forEach((dup) => {
+              const key = `${dup.Latitude},${dup.Longitude}`;
+              if (!coordGroups[key]) {
+                coordGroups[key] = {
+                  coords: `${dup.Latitude}, ${dup.Longitude}`,
+                  count: 0,
+                  lines: [],
+                };
+              }
+              coordGroups[key].count++;
+              coordGroups[key].lines.push(dup.Ligne);
+            });
+
+            for (const group of Object.values(coordGroups)) {
+              const summaryItem = document.createElement("div");
+              summaryItem.className = "summary-item duplicate";
+              summaryItem.innerHTML = `
+                            <h4>Coordonnées: ${group.coords}</h4>
+                            <p>${
+                              group.count
+                            } station(s) aux lignes: ${group.lines.join(
+                ", "
+              )}</p>
+                        `;
+              summaryCards.appendChild(summaryItem);
+            }
+
+            // Remplir le tableau détaillé
+            const headers = ["Ligne", "Identifiant", "Latitude", "Longitude"];
+            tableHeader.innerHTML = headers
+              .map((h) => `<th>${h}</th>`)
+              .join("");
+
+            data.results.doublons.forEach((dup) => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                            <td>${dup.Ligne}</td>
+                            <td>${dup.Identifiant}</td>
+                            <td>${dup.Latitude}</td>
+                            <td>${dup.Longitude}</td>
+                        `;
+              tableBody.appendChild(row);
+            });
+          }
+
+          // Activer le bouton de téléchargement
+          downloadBtn.style.display = "flex";
+        }
+
+        // Téléchargement du fichier
+        downloadBtn.addEventListener("click", function () {
+          if (!processedData) {
+            showStatus("Aucune donnée à télécharger", "error");
+            return;
+          }
+
+          showStatus("Préparation du téléchargement...", "loading");
+
+          fetch("/download", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ file: processedData }),
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Erreur lors du téléchargement");
+              }
+              return response.blob();
+            })
+            .then((blob) => {
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `resultats_${currentAction}_${new Date()
+                .toISOString()
+                .slice(0, 10)}.xlsx`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              window.URL.revokeObjectURL(url);
+              showStatus("Téléchargement terminé", "success");
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              showStatus(error.message, "error");
+            });
+        });
+
+        // Affichage des messages de statut
+        function showStatus(message, type) {
+          if (message === "") {
+            statusMessage.className = "status-message";
+            statusMessage.textContent = "";
+            return;
+          }
+          statusMessage.textContent = message;
+          statusMessage.className = "status-message " + type;
+        }
+      });
+    </script>
+  </body>
+</html>
